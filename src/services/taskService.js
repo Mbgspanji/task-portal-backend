@@ -52,6 +52,36 @@ const createTask = async ({ userId, title, description, status }) => {
 };
 
 /**
+ * Update a task's editable fields.
+ * Employees can only edit their own tasks; admins can edit any task.
+ */
+const updateTask = async ({ taskId, title, description, requestingUser }) => {
+  const sanitizedTitle = sanitize(title);
+  const sanitizedDescription = sanitize(description || '');
+
+  if (!sanitizedTitle) {
+    const error = new Error('Task title is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const task = await taskRepository.getTaskById(taskId);
+  if (!task) {
+    const error = new Error('Task not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (requestingUser.role === 'employee' && task.user_id !== requestingUser.id) {
+    const error = new Error('Forbidden: You can only edit your own tasks');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return taskRepository.updateTask({ taskId, title: sanitizedTitle, description: sanitizedDescription });
+};
+
+/**
  * Update only the status of a task.
  * Employee can only update their own tasks.
  * Admin can update any task.
@@ -103,4 +133,4 @@ const deleteTask = async ({ taskId, requestingUser }) => {
   return taskRepository.deleteTask(taskId);
 };
 
-module.exports = { getTasks, createTask, updateTaskStatus, deleteTask };
+module.exports = { getTasks, createTask, updateTask, updateTaskStatus, deleteTask };

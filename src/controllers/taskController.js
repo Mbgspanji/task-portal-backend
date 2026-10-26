@@ -34,6 +34,26 @@ const createTask = async (req, res, next) => {
 };
 
 /**
+ * PATCH /api/tasks/:id
+ * Updates the title and description of a task.
+ */
+const updateTask = async (req, res, next) => {
+  try {
+    const taskId = parseInt(req.params.id, 10);
+    const { title, description } = req.body;
+    const updatedTask = await taskService.updateTask({
+      taskId,
+      title,
+      description,
+      requestingUser: req.user,
+    });
+    res.status(200).json({ success: true, message: 'Task updated.', data: updatedTask });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * PATCH /api/tasks/:id/status
  * Updates only the status of a task.
  * Employee can only update their own tasks.
@@ -72,4 +92,4 @@ const deleteTask = async (req, res, next) => {
   }
 };
 
-module.exports = { getTasks, createTask, updateTaskStatus, deleteTask };
+module.exports = { getTasks, createTask, updateTask, updateTaskStatus, deleteTask };

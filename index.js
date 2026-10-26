@@ -4,7 +4,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const { initializeDatabase } = require('./src/config/migrate');
-const { generalRateLimiter } = require('./src/middlewares/rateLimiter');
+const {
+  deviceIdentifier,
+  generalRateLimiter,
+} = require('./src/middlewares/rateLimiter');
 const { errorHandler } = require('./src/middlewares/errorHandler');
 
 const authRoutes = require('./src/routes/authRoutes');
@@ -45,6 +48,7 @@ app.use(
 app.use(express.json({ limit: '10kb' })); // Limit payload size
 
 // ─── General Rate Limiting ───────────────────────────────────────────────────
+app.use(deviceIdentifier);
 app.use('/api', generalRateLimiter);
 
 // ─── Health Check ────────────────────────────────────────────────────────────

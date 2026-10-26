@@ -64,6 +64,17 @@ const updateTaskStatus = async ({ taskId, status }) => {
   return rows[0] || null;
 };
 
+const updateTask = async ({ taskId, title, description }) => {
+  const query = `
+    UPDATE tasks
+    SET title = $1, description = $2, updated_at = NOW()
+    WHERE id = $3
+    RETURNING id, user_id, title, description, status, created_at, updated_at
+  `;
+  const { rows } = await pool.query(query, [title, description, taskId]);
+  return rows[0] || null;
+};
+
 const deleteTask = async (taskId) => {
   const query = 'DELETE FROM tasks WHERE id = $1 RETURNING id';
   const { rows } = await pool.query(query, [taskId]);
@@ -75,6 +86,7 @@ module.exports = {
   getTasksByUserId,
   getTaskById,
   createTask,
+  updateTask,
   updateTaskStatus,
   deleteTask,
 };

@@ -12,6 +12,9 @@ router.get('/', taskController.getTasks);
 // POST /api/tasks — Any authenticated user can create a task for themselves
 router.post('/', taskController.createTask);
 
+// PATCH /api/tasks/:id — Employee edits own task; Admin can edit any
+router.patch('/:id', taskController.updateTask);
+
 // PATCH /api/tasks/:id/status — Employee updates own task status; Admin can update any
 router.patch('/:id/status', taskController.updateTaskStatus);
 
