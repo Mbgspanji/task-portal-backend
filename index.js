@@ -19,6 +19,7 @@ app.use(helmet());
 
 // CORS: only allow our frontend origin
 const allowedOrigins = [
+  'https://project-study-one.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   process.env.FRONTEND_URL,
@@ -34,6 +35,8 @@ app.use(
         callback(new Error(`CORS: Origin '${origin}' not allowed`));
       }
     },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   })
 );
