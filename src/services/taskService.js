@@ -1,0 +1,106 @@
+const xss = require('xss');
+const taskRepository = require('../repositories/taskRepository');
+
+const VALID_STATUSES = ['todo', 'in_progress', 'done'];
+
+/**
+ * Sanitize a string against XSS attacks.
+ */
+const sanitize = (str) => {
+  if (typeof str !== 'string') return str;
+  return xss(str.trim());
+};
+
+/**
+ * Get tasks based on user role:
+ * - Admin: all tasks
+ * - Employee: only their own tasks
+ */
+const getTasks = async (user) => {
+  if (user.role === 'admin') {
+    return taskRepository.getAllTasks();
+  }
+  return taskRepository.getTasksByUserId(user.id);
+};
+
+/**
+ * Create a new task.
+ * Sanitizes title and description to prevent XSS.
+ */
+const createTask = async ({ userId, title, description, status }) => {
+  const sanitizedTitle = sanitize(title);
+  const sanitizedDescription = sanitize(description || '');
+
+  if (!sanitizedTitle) {
+    const error = new Error('Task title is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (status && !VALID_STATUSES.includes(status)) {
+    const error = new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return taskRepository.createTask({
+    userId,
+    title: sanitizedTitle,
+    description: sanitizedDescription,
+    status: status || 'todo',
+  });
+};
+
+/**
+ * Update only the status of a task.
+ * Employee can only update their own tasks.
+ * Admin can update any task.
+ */
+const updateTaskStatus = async ({ taskId, status, requestingUser }) => {
+  if (!VALID_STATUSES.includes(status)) {
+    const error = new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const task = await taskRepository.getTaskById(taskId);
+  if (!task) {
+    const error = new Error('Task not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Authorization check: Employee can only modify their own tasks
+  if (requestingUser.role === 'employee' && task.user_id !== requestingUser.id) {
+    const error = new Error('Forbidden: You can only update your own tasks');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return taskRepository.updateTaskStatus({ taskId, status });
+};
+
+/**
+ * Delete a task.
+ * Admin can delete any task.
+ * Employee cannot delete tasks (enforced at route level, but double-checked here).
+ */
+const deleteTask = async ({ taskId, requestingUser }) => {
+  const task = await taskRepository.getTaskById(taskId);
+  if (!task) {
+    const error = new Error('Task not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Only admin can delete any task
+  if (requestingUser.role !== 'admin') {
+    const error = new Error('Forbidden: Only admins can delete tasks');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return taskRepository.deleteTask(taskId);
+};
+
+module.exports = { getTasks, createTask, updateTaskStatus, deleteTask };
