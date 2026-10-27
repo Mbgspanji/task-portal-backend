@@ -12,7 +12,8 @@ const seedDatabase = async () => {
 
     // Check if admin already seeded
     const existingAdmin = await pool.query(
-      "SELECT id FROM users WHERE email = 'admin@securetask.com' LIMIT 1"
+      'SELECT id FROM users WHERE email = $1 LIMIT 1',
+      ['admin@securetask.com']
     );
     if (existingAdmin.rows.length > 0) {
       console.log('⚠️  Seed data already exists. Skipping...');
@@ -41,11 +42,26 @@ const seedDatabase = async () => {
     // Create sample tasks
     await pool.query(
       `INSERT INTO tasks (user_id, title, description, status) VALUES
-       ($1, 'Setup project infrastructure', 'Initialize the project repo and configure CI/CD pipelines', 'done'),
-       ($1, 'Write security documentation', 'Document all security measures implemented in the portal', 'in_progress'),
-       ($2, 'Complete onboarding training', 'Finish all required onboarding modules by end of week', 'todo'),
-       ($2, 'Submit weekly report', 'Prepare and submit the weekly progress report to the manager', 'in_progress')`,
-      [adminId, empId]
+       ($1, $3, $4, $5),
+       ($1, $6, $7, $8),
+       ($2, $9, $10, $11),
+       ($2, $12, $13, $14)`,
+      [
+        adminId,
+        empId,
+        'Setup project infrastructure',
+        'Initialize the project repo and configure CI/CD pipelines',
+        'done',
+        'Write security documentation',
+        'Document all security measures implemented in the portal',
+        'in_progress',
+        'Complete onboarding training',
+        'Finish all required onboarding modules by end of week',
+        'todo',
+        'Submit weekly report',
+        'Prepare and submit the weekly progress report to the manager',
+        'in_progress',
+      ]
     );
 
     console.log('✅ Seed data inserted successfully!');

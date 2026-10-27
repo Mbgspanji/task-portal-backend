@@ -12,12 +12,15 @@ const errorHandler = (err, req, res, next) => {
     console.error(err.stack);
   }
 
-  res.status(statusCode).json({
+  const response = {
     success: false,
     message: err.message || 'An internal server error occurred.',
+    ...(req.loginRateLimitWarning ? { warning: req.loginRateLimitWarning } : {}),
     // Only expose stack trace in development
     ...(isProduction ? {} : { stack: err.stack }),
-  });
+  };
+
+  res.status(statusCode).json(response);
 };
 
 module.exports = { errorHandler };

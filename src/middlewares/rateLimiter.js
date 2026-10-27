@@ -47,24 +47,26 @@ const isValidDeviceToken = (token) => {
 
 /**
  * Assign a stable, opaque identifier to each browser/device.
- * The IP fallback only applies to the first request before the cookie is set.
+ * The IP fallback is important when a cross-origin frontend does not send
+ * the HttpOnly cookie back with the next request.
  */
 const deviceIdentifier = (req, res, next) => {
   const existingDeviceToken = getCookie(req.headers.cookie, DEVICE_COOKIE_NAME);
   const hasValidDeviceToken = isValidDeviceToken(existingDeviceToken);
-  const deviceToken = hasValidDeviceToken
-    ? existingDeviceToken
-    : createDeviceToken();
+  const deviceToken = hasValidDeviceToken ? existingDeviceToken : null;
 
-  req.deviceId = deviceToken;
+  // Never generate a new limiter key for every request when the cookie is missing.
+  req.deviceId = deviceToken || `ip:${ipKeyGenerator(req.ip)}`;
 
   if (!hasValidDeviceToken) {
+    // The cookie improves device-level accuracy when the browser supports it.
+    const newDeviceToken = createDeviceToken();
     const isProduction = process.env.NODE_ENV === 'production';
     const secure = isProduction ? '; Secure' : '';
     const sameSite = isProduction ? 'None' : 'Lax';
     res.setHeader(
       'Set-Cookie',
-      `${DEVICE_COOKIE_NAME}=${deviceToken}; Max-Age=${DEVICE_COOKIE_MAX_AGE}; Path=/; HttpOnly; SameSite=${sameSite}${secure}`
+      `${DEVICE_COOKIE_NAME}=${newDeviceToken}; Max-Age=${DEVICE_COOKIE_MAX_AGE}; Path=/; HttpOnly; SameSite=${sameSite}${secure}`
     );
   }
 
@@ -76,25 +78,42 @@ const deviceKeyGenerator = (req) =>
 
 /**
  * Rate Limiter for Login endpoint:
- * - Max 5 failed attempts per 15 minutes per device
+ * - Max 5 failed attempts per 15 minutes per IP address
  * - Returns 429 status with a clear message
  */
-const loginRateLimiter = rateLimit({
+const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // max 5 requests per window
-  keyGenerator: deviceKeyGenerator,
+  max: 5, // Allow five failed attempts; the sixth attempt receives 429.
+  // Login requests must be limited by IP even when the browser does not keep cookies.
+  keyGenerator: (req) => `login-ip:${ipKeyGenerator(req.ip)}`,
   standardHeaders: true,    // Return rate limit info in 'RateLimit-*' headers
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed attempts (4xx/5xx responses)
   message: {
     success: false,
     message:
-      'Too many login attempts from this device. You have been blocked for 15 minutes. Please try again later.',
+      'Too many login attempts from this IP address. You have been blocked for 15 minutes. Please try again later.',
   },
   handler: (req, res, next, options) => {
     res.status(options.statusCode).json(options.message);
   },
 });
+
+/**
+ * Add a warning to the last allowed login attempt.
+ * The fifth failed request is still processed, while the sixth is blocked.
+ */
+const loginRateLimiter = (req, res, next) => {
+  loginRateLimit(req, res, () => {
+    if (req.rateLimit && req.rateLimit.remaining === 0) {
+      req.loginRateLimitWarning =
+        'This is your last allowed login attempt. The next failed attempt will be blocked for 15 minutes.';
+      // Expose the warning as a header for clients that do not display error messages.
+      res.setHeader('X-Login-RateLimit-Warning', req.loginRateLimitWarning);
+    }
+    next();
+  });
+};
 
 /**
  * General API rate limiter:

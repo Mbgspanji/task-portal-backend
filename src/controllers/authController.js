@@ -16,6 +16,10 @@ const login = async (req, res, next) => {
     const result = await authService.loginUser({ email, password });
     res.status(200).json({ success: true, message: 'Login successful.', data: result });
   } catch (err) {
+    // Inform the user when this failed attempt used the final available try.
+    if (req.loginRateLimitWarning && err.statusCode === 401) {
+      err.message = `${err.message}. ${req.loginRateLimitWarning}`;
+    }
     next(err);
   }
 };
