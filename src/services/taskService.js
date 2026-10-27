@@ -11,6 +11,15 @@ const sanitize = (str) => {
   return xss(str.trim());
 };
 
+// Keep validation in the service so all callers receive the same behavior.
+const validateTaskId = (taskId) => {
+  if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+    const error = new Error('Task ID must be a positive integer');
+    error.statusCode = 400;
+    throw error;
+  }
+};
+
 /**
  * Get tasks based on user role:
  * - Admin: all tasks
@@ -29,10 +38,16 @@ const getTasks = async (user) => {
  */
 const createTask = async ({ userId, title, description, status }) => {
   const sanitizedTitle = sanitize(title);
-  const sanitizedDescription = sanitize(description || '');
+  const sanitizedDescription = description == null ? '' : sanitize(description);
 
-  if (!sanitizedTitle) {
+  if (typeof sanitizedTitle !== 'string' || !sanitizedTitle) {
     const error = new Error('Task title is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (typeof sanitizedDescription !== 'string') {
+    const error = new Error('Task description must be a string');
     error.statusCode = 400;
     throw error;
   }
@@ -56,11 +71,18 @@ const createTask = async ({ userId, title, description, status }) => {
  * Employees can only edit their own tasks; admins can edit any task.
  */
 const updateTask = async ({ taskId, title, description, requestingUser }) => {
+  validateTaskId(taskId);
   const sanitizedTitle = sanitize(title);
-  const sanitizedDescription = sanitize(description || '');
+  const sanitizedDescription = description == null ? '' : sanitize(description);
 
-  if (!sanitizedTitle) {
+  if (typeof sanitizedTitle !== 'string' || !sanitizedTitle) {
     const error = new Error('Task title is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (typeof sanitizedDescription !== 'string') {
+    const error = new Error('Task description must be a string');
     error.statusCode = 400;
     throw error;
   }
@@ -87,6 +109,7 @@ const updateTask = async ({ taskId, title, description, requestingUser }) => {
  * Admin can update any task.
  */
 const updateTaskStatus = async ({ taskId, status, requestingUser }) => {
+  validateTaskId(taskId);
   if (!VALID_STATUSES.includes(status)) {
     const error = new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     error.statusCode = 400;
@@ -116,6 +139,7 @@ const updateTaskStatus = async ({ taskId, status, requestingUser }) => {
  * Employee cannot delete tasks (enforced at route level, but double-checked here).
  */
 const deleteTask = async ({ taskId, requestingUser }) => {
+  validateTaskId(taskId);
   const task = await taskRepository.getTaskById(taskId);
   if (!task) {
     const error = new Error('Task not found');

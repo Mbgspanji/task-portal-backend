@@ -1,5 +1,11 @@
 const taskService = require('../services/taskService');
 
+// Convert a route parameter into a positive integer or return null for invalid IDs.
+const parseTaskId = (value) => {
+  const taskId = Number(value);
+  return Number.isSafeInteger(taskId) && taskId > 0 ? taskId : null;
+};
+
 /**
  * GET /api/tasks
  * Admin: returns all tasks.
@@ -39,7 +45,10 @@ const createTask = async (req, res, next) => {
  */
 const updateTask = async (req, res, next) => {
   try {
-    const taskId = parseInt(req.params.id, 10);
+    const taskId = parseTaskId(req.params.id);
+    if (taskId === null) {
+      return res.status(400).json({ success: false, message: 'Task ID must be a positive integer.' });
+    }
     const { title, description } = req.body;
     const updatedTask = await taskService.updateTask({
       taskId,
@@ -60,7 +69,10 @@ const updateTask = async (req, res, next) => {
  */
 const updateTaskStatus = async (req, res, next) => {
   try {
-    const taskId = parseInt(req.params.id, 10);
+    const taskId = parseTaskId(req.params.id);
+    if (taskId === null) {
+      return res.status(400).json({ success: false, message: 'Task ID must be a positive integer.' });
+    }
     const { status } = req.body;
 
     if (!status) {
@@ -84,7 +96,10 @@ const updateTaskStatus = async (req, res, next) => {
  */
 const deleteTask = async (req, res, next) => {
   try {
-    const taskId = parseInt(req.params.id, 10);
+    const taskId = parseTaskId(req.params.id);
+    if (taskId === null) {
+      return res.status(400).json({ success: false, message: 'Task ID must be a positive integer.' });
+    }
     const deleted = await taskService.deleteTask({ taskId, requestingUser: req.user });
     res.status(200).json({ success: true, message: 'Task deleted successfully.', data: deleted });
   } catch (err) {

@@ -8,7 +8,15 @@ const createEmployee = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    // Validate the request shape before accessing string properties.
+    if (
+      typeof name !== 'string' ||
+      typeof email !== 'string' ||
+      typeof password !== 'string' ||
+      !name.trim() ||
+      !email.trim() ||
+      !password
+    ) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
     }
 

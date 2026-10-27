@@ -6,8 +6,12 @@ const pool = require('../config/db');
  */
 const initializeDatabase = async () => {
   const client = await pool.connect();
+  let transactionStarted = false;
+
   try {
+    // Keep schema creation atomic so a failed migration does not leave partial tables.
     await client.query('BEGIN');
+    transactionStarted = true;
 
     // Create ENUM type for roles (idempotent)
     await client.query(`
@@ -79,10 +83,17 @@ const initializeDatabase = async () => {
       DROP CONSTRAINT IF EXISTS tasks_status_check;
     `);
 
+    // Commit only after every type, table, column, and constraint is ready.
     await client.query('COMMIT');
+    transactionStarted = false;
     console.log('✅ Database tables initialized');
   } catch (err) {
-    await client.query('ROLLBACK');
+    // Roll back only when BEGIN succeeded; this avoids masking the original error.
+    if (transactionStarted) {
+      await client.query('ROLLBACK').catch((rollbackError) => {
+        console.error('❌ Database rollback error:', rollbackError.message);
+      });
+    }
     console.error('❌ Database initialization error:', err.message);
     throw err;
   } finally {

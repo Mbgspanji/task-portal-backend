@@ -8,7 +8,8 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    // Reject malformed payloads before sending them to the authentication service.
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
