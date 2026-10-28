@@ -36,7 +36,6 @@ const register = async (req, res, next) => {
         email:      result.user.email,
         role:       result.user.role,
         isVerified: result.user.is_verified,
-        previewOtp: result.previewOtp,
       },
     });
   } catch (err) {
@@ -88,9 +87,6 @@ const resendOtp = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: result.message,
-      data: {
-        previewOtp: result.previewOtp,
-      },
     });
   } catch (err) {
     next(err);

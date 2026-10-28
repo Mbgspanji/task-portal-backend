@@ -92,7 +92,7 @@ const registerWithOtp = async ({ name, email, password, role = 'employee' }) => 
   console.log(`🔑 [KODE OTP]: ${otp} (Berlaku 5 menit)`);
   console.log('==================================================\n');
 
-  return { user, previewOtp: otp };
+  return { user };
 };
 
 // ─── Verifikasi OTP ────────────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ const resendOtp = async (email) => {
   console.log(`🔑 [KODE OTP BARU]: ${otp} (Berlaku 5 menit)`);
   console.log('==================================================\n');
 
-  return { message: 'Kode OTP baru telah dikirim ke email Anda.', previewOtp: otp };
+  return { message: 'Kode OTP baru telah dikirim ke email Anda.' };
 };
 
 // ─── Registrasi oleh Admin ─────────────────────────────────────────────────────
