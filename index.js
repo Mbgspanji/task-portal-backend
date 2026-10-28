@@ -9,6 +9,7 @@ const {
   generalRateLimiter,
 } = require('./src/middlewares/rateLimiter');
 const { errorHandler } = require('./src/middlewares/errorHandler');
+const { startOtpCleanupCron } = require('./src/jobs/otpCleanupJob');
 
 const authRoutes = require('./src/routes/authRoutes');
 const taskRoutes = require('./src/routes/taskRoutes');
@@ -77,6 +78,10 @@ const startServer = async () => {
   try {
     // Initialize DB tables on startup
     await initializeDatabase();
+
+    // Start Daily OTP Cleanup Cron Job (00:00 every day)
+    startOtpCleanupCron();
+
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);

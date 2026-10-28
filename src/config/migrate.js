@@ -86,6 +86,27 @@ const initializeDatabase = async () => {
       DROP CONSTRAINT IF EXISTS tasks_status_check;
     `);
 
+    // OTP table for email verification (6-digit, single-use, expires in 5 min)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_otps (
+        id            SERIAL PRIMARY KEY,
+        email         VARCHAR(255) NOT NULL,
+        otp_hash      TEXT NOT NULL,
+        expires_at    TIMESTAMPTZ NOT NULL,
+        is_used       BOOLEAN NOT NULL DEFAULT false,
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        verified_at   TIMESTAMPTZ
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_otps_email   ON email_otps (email);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_otps_expires ON email_otps (expires_at);
+    `);
+
     // Commit only after every type, table, column, and constraint is ready.
     await client.query('COMMIT');
     transactionStarted = false;

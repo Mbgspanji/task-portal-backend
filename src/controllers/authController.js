@@ -1,9 +1,8 @@
 const authService = require('../services/authService');
 
+// ─── POST /api/auth/register ───────────────────────────────────────────────────
 /**
- * POST /api/auth/register
- * Public registration with email token verification.
- * User can choose role ('employee' or 'admin').
+ * Registrasi publik. Membuat akun (belum aktif) dan mengirim OTP ke email.
  */
 const register = async (req, res, next) => {
   try {
@@ -26,23 +25,18 @@ const register = async (req, res, next) => {
 
     const selectedRole = role === 'admin' ? 'admin' : 'employee';
 
-    const result = await authService.registerWithVerification({
-      name,
-      email,
-      password,
-      role: selectedRole,
-    });
+    const result = await authService.registerWithOtp({ name, email, password, role: selectedRole });
 
     res.status(201).json({
       success: true,
-      message: 'Registrasi berhasil! Silakan periksa inbox email Mailtrap Anda untuk kode token verifikasi akun.',
+      message: `Registrasi berhasil! Kode OTP 6 digit telah dikirim ke ${result.user.email}. Berlaku 5 menit.`,
       data: {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role,
+        id:         result.user.id,
+        name:       result.user.name,
+        email:      result.user.email,
+        role:       result.user.role,
         isVerified: result.user.is_verified,
-        previewToken: result.previewToken, // provided for convenient local/dev testing
+        previewOtp: result.previewOtp,
       },
     });
   } catch (err) {
@@ -50,35 +44,38 @@ const register = async (req, res, next) => {
   }
 };
 
+// ─── POST /api/auth/verify-otp ─────────────────────────────────────────────────
 /**
- * GET or POST /api/auth/verify-email
- * Verifies email via token and returns JWT token for instant login.
+ * Verifikasi kode OTP 6 digit. Jika cocok, akun diaktifkan dan JWT dikembalikan.
  */
-const verifyEmail = async (req, res, next) => {
+const verifyOtp = async (req, res, next) => {
   try {
-    const token = req.query.token || req.body.token;
+    const { email, otp } = req.body;
 
-    if (!token) {
-      return res.status(400).json({ success: false, message: 'Token verifikasi wajib disertakan.' });
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email wajib diisi.' });
+    }
+    if (!otp || typeof otp !== 'string') {
+      return res.status(400).json({ success: false, message: 'Kode OTP wajib diisi.' });
     }
 
-    const result = await authService.verifyEmailToken(token);
+    const result = await authService.verifyOtpAndActivate({ email, otp });
 
     res.status(200).json({
       success: true,
       message: 'Email berhasil diverifikasi! Akun Anda kini aktif.',
-      data: result,
+      data:    result,
     });
   } catch (err) {
     next(err);
   }
 };
 
+// ─── POST /api/auth/resend-otp ─────────────────────────────────────────────────
 /**
- * POST /api/auth/resend-verification
- * Resends verification token to the user's email.
+ * Kirim ulang OTP baru ke email (dengan rate-limiting).
  */
-const resendVerification = async (req, res, next) => {
+const resendOtp = async (req, res, next) => {
   try {
     const { email } = req.body;
 
@@ -86,43 +83,43 @@ const resendVerification = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email wajib diisi.' });
     }
 
-    const result = await authService.resendVerificationToken(email);
+    const result = await authService.resendOtp(email);
 
     res.status(200).json({
       success: true,
       message: result.message,
-      data: { previewToken: result.previewToken },
+      data: {
+        previewOtp: result.previewOtp,
+      },
     });
   } catch (err) {
     next(err);
   }
 };
 
+// ─── POST /api/auth/login ─────────────────────────────────────────────────────
 /**
- * POST /api/auth/login
- * Authenticates a user and returns a JWT token.
+ * Login — verifikasi kredensial dan kembalikan JWT.
  */
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+      return res.status(400).json({ success: false, message: 'Email dan password wajib diisi.' });
     }
 
     const result = await authService.loginUser({ email, password });
-    res.status(200).json({ success: true, message: 'Login successful.', data: result });
+
+    res.status(200).json({ success: true, message: 'Login berhasil.', data: result });
   } catch (err) {
-    if (req.loginRateLimitWarning && err.statusCode === 401) {
-      err.message = `${err.message}. ${req.loginRateLimitWarning}`;
-    }
     next(err);
   }
 };
 
+// ─── GET /api/auth/profile ────────────────────────────────────────────────────
 /**
- * GET /api/auth/profile
- * Returns the profile of the currently authenticated user.
+ * Kembalikan profil pengguna yang sedang login.
  */
 const getProfile = async (req, res, next) => {
   try {
@@ -135,8 +132,8 @@ const getProfile = async (req, res, next) => {
 
 module.exports = {
   register,
-  verifyEmail,
-  resendVerification,
+  verifyOtp,
+  resendOtp,
   login,
   getProfile,
 };
