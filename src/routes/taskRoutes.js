@@ -18,7 +18,7 @@ router.patch('/:id', taskController.updateTask);
 // PATCH /api/tasks/:id/status — Employee updates own task status; Admin can update any
 router.patch('/:id/status', taskController.updateTaskStatus);
 
-// DELETE /api/tasks/:id — Admin only
-router.delete('/:id', authorize('admin'), taskController.deleteTask);
+// DELETE /api/tasks/:id — Admin can delete any; Employee can delete own task
+router.delete('/:id', taskController.deleteTask);
 
 module.exports = router;

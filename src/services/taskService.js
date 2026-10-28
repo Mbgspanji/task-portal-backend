@@ -136,7 +136,7 @@ const updateTaskStatus = async ({ taskId, status, requestingUser }) => {
 /**
  * Delete a task.
  * Admin can delete any task.
- * Employee cannot delete tasks (enforced at route level, but double-checked here).
+ * Employee can delete their own tasks.
  */
 const deleteTask = async ({ taskId, requestingUser }) => {
   validateTaskId(taskId);
@@ -147,9 +147,9 @@ const deleteTask = async ({ taskId, requestingUser }) => {
     throw error;
   }
 
-  // Only admin can delete any task
-  if (requestingUser.role !== 'admin') {
-    const error = new Error('Forbidden: Only admins can delete tasks');
+  // Authorization check: Employee can only delete their own task
+  if (requestingUser.role === 'employee' && task.user_id !== requestingUser.id) {
+    const error = new Error('Forbidden: You can only delete your own tasks');
     error.statusCode = 403;
     throw error;
   }

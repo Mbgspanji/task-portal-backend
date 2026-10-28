@@ -47,7 +47,10 @@ const initializeDatabase = async () => {
     await client.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ;
     `);
 
     // Remove the legacy role constraint if the database was created by an

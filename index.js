@@ -58,6 +58,7 @@ app.get('/', (req, res) => {
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api', authRoutes); // Support both /api/auth/register and /api/register
 app.use('/api/tasks', taskRoutes);
 app.use('/api/admin', adminRoutes);
 

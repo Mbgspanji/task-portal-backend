@@ -26,9 +26,10 @@ const getTasks = async (req, res, next) => {
  */
 const createTask = async (req, res, next) => {
   try {
-    const { title, description, status } = req.body;
+    const { title, description, status, userId } = req.body;
+    const targetUserId = req.user.role === 'admin' && userId ? Number(userId) : req.user.id;
     const task = await taskService.createTask({
-      userId: req.user.id,
+      userId: targetUserId,
       title,
       description,
       status,
