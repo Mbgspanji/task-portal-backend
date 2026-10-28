@@ -23,7 +23,8 @@ const register = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Password minimal 8 karakter.' });
     }
 
-    const selectedRole = role === 'admin' ? 'admin' : 'employee';
+    // Registrasi publik otomatis dan khusus untuk role employee
+    const selectedRole = 'employee';
 
     const result = await authService.registerWithOtp({ name, email, password, role: selectedRole });
 

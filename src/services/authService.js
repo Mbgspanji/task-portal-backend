@@ -40,9 +40,9 @@ function generateOtp() {
  * POST /api/auth/register
  * Buat akun (belum aktif), lalu kirim OTP ke email.
  */
-const registerWithOtp = async ({ name, email, password, role = 'employee' }) => {
+const registerWithOtp = async ({ name, email, password }) => {
   const normalizedEmail = email.trim().toLowerCase();
-  const normalizedRole  = role === 'admin' ? 'admin' : 'employee';
+  const normalizedRole  = 'employee'; // Registrasi pertama kali langsung otomatis role employee
 
   const existingUser = await findUserByEmail(normalizedEmail);
   if (existingUser) {
